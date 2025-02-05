@@ -1,16 +1,23 @@
 {
   "name": "hono-mvc-starter",
+  "type": "module",
   "scripts": {
     "deploy:staging": "wrangler deploy --env staging",
-    "depoy:production": "wrangler deploy --minify --env production",
+    "deploy:production": "wrangler deploy --env production",
     "dev": "wrangler dev",
-    "test": "vitest"
+    "test": "vitest",
+    "lint": "eslint src/**/*.ts --fix"
   },
   "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "hono": "^4.6.20"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250109.0",
+    "@eslint/js": "^9.19.0",
+    "@vitest/ui": "^3.0.5",
+    "eslint": "^9.19.0",
     "vitest": "^3.0.5",
     "wrangler": "3.105.0"
   }

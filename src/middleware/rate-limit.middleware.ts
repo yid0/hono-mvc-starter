@@ -1,14 +1,5 @@
 import { Context, Next } from 'hono';
-
-interface RateLimitConfig {
-  windowMs: number;      
-  maxRequests: number;   
-}
-
-interface RateLimitInfo {
-  count: number;
-  resetTime: number;
-}
+import { RateLimitConfig, RateLimitInfo } from '../types';
 
 export class RateLimitMiddleware {
   private requests: WeakMap<object, RateLimitInfo>;
@@ -57,7 +48,7 @@ export class RateLimitMiddleware {
       requestInfo.count++;
       this.requests.set(ipData.key, requestInfo);
 
-      // Envoyer les headers sans les exposer via CORS
+
       c.header('X-RateLimit-Limit', this.config.maxRequests.toString());
       c.header('X-RateLimit-Remaining', 
         Math.max(0, this.config.maxRequests - requestInfo.count).toString());

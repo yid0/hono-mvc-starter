@@ -1,3 +1,0 @@
-// TODO
-
-const appSchema = {}

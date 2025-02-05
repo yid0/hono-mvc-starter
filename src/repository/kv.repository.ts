@@ -1,4 +1,4 @@
-import {KVNamespace} from 'hono';
+import { KVNamespace } from 'hono';
 import { FeedbackDTO } from "../types";
 import { Repository } from "./repository";
 
@@ -7,7 +7,7 @@ export class KVRepository implements Repository {
     constructor(private readonly kv: KVNamespace) {
         this.kv = kv;
     }
-
+  
     async save(data: any): Promise<void> { 
 
         return data;

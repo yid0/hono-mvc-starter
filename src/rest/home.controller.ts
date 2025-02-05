@@ -3,7 +3,13 @@ import { RoutesMap } from '../configuration/routes';
 import { FeedBackService } from '../services/feedback.service';
 import { StarService } from '../services/star.service';
 import { Handler } from '../types';
+import { footer } from '../views/home';
+import { honoLogo } from '../views/hono-logo';
+import { callApi } from '../views/scripts/call-api';
+import { toggleStar } from '../views/scripts/toggle-star';
+import { updateFeedbacks } from '../views/scripts/update-feedback';
 import { globaleStyles } from '../views/styles';
+import { HtmlSanitizer } from '../utils/sanitizer';
 
 export class HomeController implements Handler {
     private starService!: StarService
@@ -14,35 +20,102 @@ export class HomeController implements Handler {
     ) {
 
       
+    }  
+
+    async handle() : Promise<void>{      
+        await this.renderMainPage();
+        await this.getFeedbacks();    
+        await this.checkStatus();
+        await this.handleStarRoutes();
     }
-  
 
-    async handle() : Promise<void>{
+    private async handleStarRoutes() {
+        // Vérifier le statut de l'étoile
+        this.app.get('/star/check', async (c) => {
+            const identifier = c.req.header('cf-connecting-ip') || 
+                             c.req.header('x-forwarded-for') || 
+                             'unknown';
+            
+            const hasStarred = await this.starService.hasStarred(identifier);
+            return c.json({ hasStarred });
+        });
 
+        // Toggle star endpoint
+        this.app.post('/star', async (c) => {
+            const identifier = c.req.header('cf-connecting-ip') || 
+                             c.req.header('x-forwarded-for') || 
+                             'unknown';
+            
+            const hasStarred = await this.starService.hasStarred(identifier);
+            if (hasStarred) {
+                await this.starService.removeStar(identifier);
+                return c.json({ starred: false });
+            } else {
+                await this.starService.addStar(identifier);
+                return c.json({ starred: true });
+            }
+        });
+    }
+
+    private async renderMainPage() {
         this.app.get(RoutesMap.home, async (c) => {
 
             this.starService = new StarService(
                 c.configuration
              );
-            const [feedbacks, starCount] = await Promise.all([
-                this.feedbackService.getFeedbacks(),
+
+            const page = Number(c.req.query('page')) || 1;
+            
+            const [feedbacksData, starCount] = await Promise.all([
+                this.feedbackService.findPaginated(page, 4),
                 this.starService.getTotalStars()
             ]);
 
+            const totalPages = Math.ceil(feedbacksData.total / 4);
+            const feedbacks = feedbacksData.data;
+
             const html = `
                 <!DOCTYPE html>
-                <html lang="fr">
+                <html lang="en">
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <title>${c.configuration.appName || 'Hono MVC application example'}</title>
+                    
+                    <!-- SEO Meta Tags -->
+                    <meta name="description" content="${c.configuration.appDescription}">
+                    <meta name="keywords" content="Hono, MVC, TypeScript, API, Web Framework, Rate Limiting">
+                    <meta name="author" content="${c.configuration.author || 'Hono MVC Team'}">
+                    <meta name="robots" content="index, follow">
+                    
+                    <!-- Open Graph / Facebook -->
+                    <meta property="og:type" content="website">
+                    <meta property="og:url" content="${c.configuration.appUrl}">
+                    <meta property="og:title" content="${c.configuration.appName}">
+                    <meta property="og:description" content="${c.configuration.appDescription}">
+
+                    <!-- Twitter -->
+                    <meta property="twitter:card" content="summary_large_image">
+                    <meta property="twitter:url" content="${c.configuration.appUrl}">
+                    <meta property="twitter:title" content="${c.configuration.appName}">
+                    <meta property="twitter:description" content="${c.configuration.appDescription}">
+
+                    <!-- Canonical URL -->
+                    <link rel="canonical" href="${c.configuration.appUrl}">
+                    
+                    <title>${c.configuration.appName} - ${c.configuration.appDescription}</title>
+
                     <!-- Bootstrap 5 CSS -->
                     <link href="${c.configuration.bootstrap.cssUrl}" rel="stylesheet">
-                    ${globaleStyles}
+                    <style>
+                        ${globaleStyles}
+                    </style>
                 </head>
                 <body class="bg-light">
                     <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
                         <div class="container">
+                            <div class="d-flex align-items-center">
+                                ${honoLogo}
+                            </div>
                             <a class="navbar-brand" href="#">${c.configuration.appName}</a>
                             <div class="d-flex align-items-center justify-content-between flex-grow-1 ms-4">
                                 <button 
@@ -55,7 +128,7 @@ export class HomeController implements Handler {
                                     Star Project
                                     <span class="badge bg-light text-dark ms-2" id="starCount">${starCount}</span>
                                 </button>
-                                <a href="https://github.com/yid0/hono-mvc-starter" 
+                                <a href=${c.configuration.author.githubUrl}
                                    class="btn btn-dark" 
                                    target="_blank" 
                                    rel="noopener noreferrer">
@@ -72,7 +145,7 @@ export class HomeController implements Handler {
                         <div class="row mb-4">
                             <div class="col">
                                 <h1 class="display-5 mb-3">Hono MVC</h1>
-                                <p class="lead text-muted">${c.configuration.description}</p>
+                                <p class="lead text-muted">${c.configuration.appDescription}</p>
                             </div>
                         </div>
 
@@ -80,10 +153,10 @@ export class HomeController implements Handler {
                             <div class="col-md-6 mb-4">
                                 <div class="card shadow-sm">
                                     <div class="card-header bg-white">
-                                        <h5 class="card-title mb-0">System Health</h5>
+                                        <h5 class="card-title mb-0">System Health Check</h5>
                                     </div>
-                                    <div class="card-body">
-                                        <button class="btn btn-primary mb-3" onclick="callApi('/health')">
+                                    <div class="card card-body">
+                                        <button class="btn btn-outline-primary mb-3" onclick="callApi('/health')">
                                             Check Health Status
                                         </button>
                                         <pre id="response" class="response border"></pre>
@@ -92,113 +165,124 @@ export class HomeController implements Handler {
                             </div>
 
                             <div class="col-md-6 mb-4">
-                                <div class="card shadow-sm">
-                                    <div class="card-header bg-white">
-                                        <h5 class="card-title mb-0">Recent Feedbacks</h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <ul class="list-group list-group-flush">
-                                            ${feedbacks.map((feedback: any) => `
-                                                <li class="list-group-item">
-                                                    <h6 class="mb-1">${feedback.name}</h6>
-                                                    <p class="mb-1 text-muted">${feedback.message}</p>
-                                                </li>
-                                            `).join('')}
-                                        </ul>
+                                <div class="feedbacks">  <!-- Déplacer la classe feedbacks ici -->
+                                    <div class="card shadow-sm">
+                                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                            <h5 class="card-title mb-0">Fake Recent Feedbacks</h5>
+                                            <small class="text-muted">Page ${page} of ${totalPages}</small>
+                                        </div>
+                                        <div class="card-body">
+                                            <ul class="list-group list-group-flush">
+                                                ${feedbacks.map((feedback: any) => `
+                                                    <li class="list-group-item">
+                                                        <h6 class="mb-1">${feedback.name}</h6>
+                                                        <p class="mb-1 text-muted">${feedback.message}</p>
+                                                    </li>
+                                                `).join('')}
+                                            </ul>
+                                            
+                                            <div class="d-flex justify-content-between mt-3">
+                                                ${page > 1 ? 
+                                                    `<button onclick="updateFeedbacks(${page-1})" class="btn btn-outline-primary btn-sm">
+                                                        Previous
+                                                    </button>` : 
+                                                    `<button class="btn btn-outline-primary btn-sm" disabled>Previous</button>`
+                                                }
+                                                ${page < totalPages ? 
+                                                    `<button onclick="updateFeedbacks(${page+1})" class="btn btn-outline-primary btn-sm">
+                                                        Next
+                                                    </button>` : 
+                                                    `<button class="btn btn-outline-primary btn-sm" disabled>Next</button>`
+                                                }
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
+                    ${footer({
+                        author: c.configuration.author
+                    })}
                     <!-- Bootstrap 5 JS Bundle -->
                     <script src="${c.configuration.bootstrap.jsUrl}"></script>
                     <script>
-                        async function callApi(path) {
-                            try {
-                                const responseDiv = document.getElementById('response');
-                                responseDiv.textContent = 'Loading...';
-                                const resp = await fetch(path);
-                                const data = await resp.json();
-                                responseDiv.textContent = JSON.stringify(data, null, 2);
-                            } catch (error) {
-                                document.getElementById('response').textContent = 
-                                    'Error: ' + error.message;
-                            }
-                        }
-
-                        async function toggleStar(button) {
-                            try {
-                                button.disabled = true;
-                                const response = await fetch('/star', { 
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' }
-                                });
-                                const data = await response.json();
-                                
-                                const starCount = document.getElementById('starCount');
-                                const currentCount = parseInt(starCount.textContent);
-                                
-                                if (data.starred) {
-                                    button.classList.remove('btn-outline-light');
-                                    button.classList.add('btn-light');
-                                    starCount.textContent = currentCount + 1;
-                                } else {
-                                    button.classList.remove('btn-light');
-                                    button.classList.add('btn-outline-light');
-                                    starCount.textContent = Math.max(0, currentCount - 1);
-                                }
-                            } catch (error) {
-                                console.error('Error toggling star:', error);
-                            } finally {
-                                button.disabled = false;
-                            }
-                        }
+                        ${callApi.toString()}
+                        ${toggleStar.toString()}
+                        ${updateFeedbacks.toString()}
+                                     
                     </script>
                 </body>
             </html>`;
             return c.html(html);
         });
-   
-
-        // Get all feedbacks
+    }
+    private async  getFeedbacks() { 
+        
         this.app.get(RoutesMap.feedbacks, async (c: Context) => {
-
-            return c.json(await this.feedbackService.getFeedbacks());
-        });
-
-        // Get a single feedback by id
-        this.app.get(RoutesMap.feedback, async (c: Context) => {
-
-            return c.json(await this.feedbackService.getFeedback(c.params.id));
-        })
-
-        // Get the version of the application /health
-        this.app.get(RoutesMap.health, (c: Context) => {
-
-            const requestId = crypto.randomUUID();
-            return c.json({ 
-                requestId: requestId,
-                status: 'UP', 
-                appName: c.configuration.appName,
-                description: c.configuration.appDescription,
-                version: c.configuration.version , 
-            });
-        });
-
-        this.app.post('/star', async (c) => {
-            const identifier = c.req.header('cf-connecting-ip') || 
-                             c.req.header('x-forwarded-for') || 
-                             'unknown';
+            const page = Number(c.req.query('page')) || 1;
+            const feedbacksData = await this.feedbackService.findPaginated(page, 4);
             
-            const hasStarred = await this.starService.hasStarred(identifier);
-            if (hasStarred) {
-                await this.starService.removeStar(identifier);
-                return c.json({ starred: false });
-            } else {
-                await this.starService.addStar(identifier);
-                return c.json({ starred: true });
+            const acceptHeader = c.req.header('Accept');
+            if (acceptHeader?.includes('application/json')) {
+                return c.json(feedbacksData);
             }
+
+            const sanitizedData = feedbacksData.data.map(feedback => 
+                HtmlSanitizer.sanitizeObject(feedback)
+            );
+            
+            const totalPages = Math.ceil(feedbacksData.total / 4);
+            
+            return c.html(`
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Fake Recent Feedbacks</h5>
+                        <small class="text-muted">Page ${page} of ${totalPages}</small>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            ${sanitizedData.map(feedback => `
+                                <li class="list-group-item">
+                                    <h6 class="mb-1">${feedback.name}</h6>
+                                    <p class="mb-1 text-muted">${feedback.message}</p>
+                                </li>
+                            `).join('')}
+                        </ul>
+                        
+                        <div class="d-flex justify-content-between mt-3">
+                            ${page > 1 ? 
+                                `<button onclick="updateFeedbacks(${page-1})" class="btn btn-outline-primary btn-sm">
+                                    Previous
+                                </button>` : 
+                                `<button class="btn btn-outline-primary btn-sm" disabled>Previous</button>`
+                            }
+                            ${page < totalPages ? 
+                                `<button onclick="updateFeedbacks(${page+1})" class="btn btn-outline-primary btn-sm">
+                                    Next
+                                </button>` : 
+                                `<button class="btn btn-outline-primary btn-sm" disabled>Next</button>`
+                            }
+                        </div>
+                    </div>
+                </div>
+            `);
         });
+    
+
+    }
+    private async checkStatus() {
+            // Get the version of the application /health
+            this.app.get(RoutesMap.health, (c: Context) => {
+                console.log('Health check request received',);
+                return c.json({ 
+                    session: c.req.header('cookie').split(';')[0].split('=')[1],
+                    requestId: c.req.header('cookie').split(';')[1].split('=')[1],
+                    status: 'UP', 
+                    appName: c.configuration.appName,
+                    description: c.configuration.appDescription,
+                    version: c.configuration.appVersion , 
+                });
+            });
     }
 }

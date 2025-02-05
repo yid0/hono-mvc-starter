@@ -1,27 +1,36 @@
 # Hono MVC Starter Kit 🚀
 
-A lightweight, type-safe MVC framework built on top of Hono.js for building scalable web applications.
+A secure and scalable MVC framework built on Hono.js and Cloudflare Workers, emphasizing type safety and modern web security practices.
 
 ## Features ✨
 
-- **MVC Architecture**: Clean separation of concerns
-- **Type Safety**: Built with TypeScript
-- **Rate Limiting**: Built-in protection against abuse
-- **CORS Support**: Configurable cross-origin resource sharing
-- **Factory Pattern**: Automated controller registration
-- **Dependency Injection**: Clean and testable code structure
-- **Configuration Management**: Environment-based configuration
+- **Robust Security**
+  - XSS Protection with HTML Sanitization
+  - Content Security Policy (CSP) Headers
+  - Environment-based CORS Configuration
+  - Rate Limiting with IP Tracking
+  - Secure Headers Management
+
+- **Modern Architecture**
+  - Clean MVC Pattern
+  - TypeScript First
+  - Dependency Injection
+  - Factory Patterns
+  - Component-based Views
+
+- **Production Ready**
+  - Cloudflare Workers Integration
+  - KV Storage for Caching
+  - Environment Configuration
+  - Comprehensive Logging
+  - Health Monitoring
 
 ## Quick Start 🏃‍♂️
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/hono-mvc-starter.git
-
-# Install dependencies
+git clone https://github.com/yid0/hono-mvc-starter.git
+cd hono-mvc-starter
 pnpm install
-
-# Start the development server
 pnpm run dev
 ```
 
@@ -29,11 +38,14 @@ pnpm run dev
 
 ```
 src/
-├── configuration/     # App configuration
-├── middleware/       # Custom middlewares
-├── repository/      # Data access layer
-├── rest/           # Controllers
-└── services/       # Business logic
+├── configuration/    # App & environment configs
+├── middleware/      # Request middleware
+├── repository/     # Data access layer
+├── rest/          # Controllers
+├── security/      # Security services
+├── services/      # Business logic
+├── utils/        # Shared utilities
+└── views/        # UI components & templates
 ```
 
 ## Core Components 🔧
@@ -70,30 +82,78 @@ Automatic controller initialization:
 ControllerFactory.createController(app, 'home');
 ```
 
-## API Endpoints 🌐
-
-| Endpoint           | Method | Description           | Rate Limit |
-|-------------------|--------|-----------------------|------------|
-| `/`               | GET    | Home page            | 100/15min  |
-| `/health`         | GET    | Health check         | 100/15min  |
-| `/feedback/:id`   | GET    | Get feedback by ID   | 100/15min  |
-| `/feedbacks`      | GET    | List all feedbacks   | 100/15min  |
-
 ## Security Features 🔒
 
-- Rate limiting with IP tracking
-- Headers security (no exposure of sensitive headers)
-- CORS configuration
-- Request validation
+### Content Security Policy
+```typescript
+const securityHeaders = {
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net",
+    "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net"
+  ].join('; ')
+};
+```
+
+### HTML Sanitization
+```typescript
+const sanitizedHtml = HtmlSanitizer.allowedTags(html, [
+  'div', 'span', 'p', 'h1', 'h2', 'h3', 'ul', 'li'
+]);
+```
+
+### CORS Configuration
+```typescript
+app.use('*', cors({
+  origin: (origin, c) => {
+    const env = c.env.ENV_NAME || 'production';
+    return getAllowedOrigins(env);
+  }
+}));
+```
 
 ## Configuration ⚙️
 
-Environment variables:
+### Environment Setup
+```toml
+# wrangler.toml
+[env.development]
+vars = { ENV_NAME = "development" }
 
-```env
-VERSION=1.0.0
-ENV=development
+[env.staging]
+vars = { 
+  ENV_NAME = "staging"
+  KV_NAMESPACE = "YOUR_STAGING_KV"
+}
+
+[env.production]
+vars = { 
+  ENV_NAME = "production"
+  KV_NAMESPACE = "YOUR_PROD_KV"
+}
 ```
+
+### Available Commands
+```bash
+# Development
+pnpm run dev          # Start development server
+
+# Deployment
+pnpm run deploy:staging    # Deploy to staging
+pnpm run deploy:prod      # Deploy to production
+
+# Testing
+pnpm run test            # Run tests
+```
+
+## API Documentation 📚
+
+| Endpoint     | Method | Description    | Security      |
+|-------------|--------|----------------|---------------|
+| `/`         | GET    | Home page      | Rate Limited  |
+| `/health`   | GET    | Health check   | Public        |
+| `/feedbacks`| GET    | List feedbacks | Sanitized     |
+| `/star`     | POST   | Toggle star    | IP Limited    |
 
 ## Error Handling 🚨
 
@@ -205,4 +265,7 @@ For support, issues, or feature requests, please file an issue through the GitHu
 
 ---
 
-Built with ❤️ using [Hono.js](https://honojs.dev/)
+Built with ❤️ by [Yani IDOUGHI](https://github.com/yid0)
+
+[![Stars](https://img.shields.io/github/stars/yid0/hono-mvc-starter)](https://github.com/yid0/hono-mvc-starter/stargazers)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)

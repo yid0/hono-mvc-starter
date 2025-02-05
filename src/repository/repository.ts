@@ -1,5 +1,6 @@
 export interface Repository {
-    findById: (id: string) => Promise<any>;
-    find:() => Promise<any>;
-    save:(data: any) => Promise<any>;
+    findById(id: string) : Promise<any>;
+    find() : Promise<any>;
+    save(data: any): Promise<any>;
+    findPaginated?(page: number, limit: number): Promise<any>;
 }
