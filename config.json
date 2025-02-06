@@ -1,6 +1,7 @@
 {
     "appName" : "Hono MVC Full example - Production Ready",
-    "description" : "This is a simple Hono app designed with MVC pattern, the new way of building flexible and scalable web apps !",
+    "appUrl": "https://hono-mvc-staging.yid0.workers.dev/",
+    "description" : "This is a simple Hono app built using the MVC pattern — the modern way to create flexible and scalable web applications?! Try it out and get inspired!",
     "author": {
         "username": "yid0",
         "fullName": "Yani IDOUGHI",

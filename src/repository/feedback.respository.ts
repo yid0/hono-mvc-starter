@@ -1,7 +1,14 @@
+import {KVNamespace} from 'hono'
 import { FeedbackDTO } from "../types";
 import { Repository } from "./repository";
 
-export class FeadbackRepository implements Repository {
+export class FeedbackRepository implements Repository {
+
+    constructor(private readonly kv: KVNamespace) {}
+    
+    delete(key: string): Promise<any> {
+        throw new Error("Method not implemented.");
+    }
 
     async save() : Promise<any>  {
         throw new Error("Method not implemented.");

@@ -1,0 +1,48 @@
+name = "hono-mvc"                   # name of the project
+compatibility_date = "2025-01-01"   # Worker compatibility date
+workers_dev = true                  # Enable workers.dev subdomain
+main = "./src/index.ts"            # Entry point of the project
+
+# Development environment settings
+kv_namespaces = [
+  { binding = "HMVC_STARS_CACHE", id = "your-dev-kv-id-here" }
+]
+
+[vars]
+VERSION = "1.0.0"
+ENV_NAME = "development"
+
+[observability]
+enabled = true
+
+# Staging environment
+[env.staging]
+name = "hono-mvc-staging"
+kv_namespaces = [
+  { binding = "HMVC_STARS_CACHE", id = "your-staging-kv-id-here" }
+]
+
+[env.staging.vars]
+VERSION = "1.0.0"
+ENV_NAME = "staging"
+
+# Production environment
+[env.production]
+name = "hono-mvc"
+kv_namespaces = [
+  { binding = "HMVC_STARS_CACHE_PROD", id = "your-production-kv-id-here" }
+]
+
+[env.production.vars]
+VERSION = "1.0.0"
+ENV_NAME = "production"
+
+# Build settings
+[build]
+command = "pnpm run build"
+watch_dir = "src"
+
+# Dev settings
+[dev]
+port = 8787
+local_protocol = "http"

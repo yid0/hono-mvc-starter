@@ -20,7 +20,7 @@
                 starCount.textContent = Math.max(0, currentCount - 1);
             }
         } catch (error) {
-            console.error('Error toggling star:', error);
+            console.error(`Error toggling star: ${error}`);
         } finally {
             button.disabled = false;
         }

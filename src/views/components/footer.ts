@@ -1,7 +1,6 @@
-import { Data } from "../types";
-import { html } from 'hono/html'
+import { Data } from '../../types';
 
-export const footer = (props?: Data) => html`
+export const footer = (props?: Data) =>`
 <footer class="footer text-white py-3">
     <div class="container text-center">
         <span>Powered By ${props?.author.fullName} - ${props?.author.creationDate}</span><br/>
@@ -15,4 +14,3 @@ export const footer = (props?: Data) => html`
         </span>
     </div>
 </footer>`;
-

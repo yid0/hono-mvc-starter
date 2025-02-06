@@ -4,5 +4,6 @@ export const RoutesMap = {
     'health': '/health',
     'feedback': '/feedback/:id',
     'feedbacks': '/feedbacks',
-    'version': '/version/:version',
+    'star': '/star',
+    'starCheck': '/star/check',
 }

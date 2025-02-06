@@ -1,18 +1,20 @@
 import metadataAppConfig from '../../config.json';
+import {getRuntimeKey} from 'hono/adapter';
 
 // TODO: Add json schema validation
 
 export class Configuration {
 
     readonly appConfig: Record<string, any>;
+    readonly env: any;
 
-    constructor(readonly app: Hono, private readonly env : any) {
-        
-        this.env = env;
-        this.appConfig = metadataAppConfig;        
-        console.log('Configuration loaded successfully', this.env);
+    constructor(readonly hono: Hono) {
+        this.appConfig = metadataAppConfig;
     }   
 
+    get appUrl(): string {        
+        return this.envName === 'production' ? this.appConfig.appUrl.replace('-staging', '') : this.appConfig.appUrl;
+    }
 
     get envName (): string {
         return this.env.ENV_NAME;
@@ -39,9 +41,20 @@ export class Configuration {
             jsUrl: this.appConfig.bootstrap.jsUrl
         }
     }
-    
+    get runtime () {
+        if (getRuntimeKey() === 'workerd') {
+            return 'workerd'
+          } else if (getRuntimeKey() === 'node') {
+            return 'node'
+          }
+    } 
+
+
     get starsCache() {
-        return this.env.HMVC_STARS_CACHE
+        if(this.envName === 'production') {
+            return this.env.HMVC_STARS_CACHE_PROD;
+        }
+        return this.env.HMVC_STARS_CACHE;
     }
       
 }

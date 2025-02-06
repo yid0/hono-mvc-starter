@@ -1,11 +1,19 @@
-export async function callApi(path) {
+export async function callApi(path: string) {
     try {
-        const responseDiv = document.getElementById('response');
-        responseDiv.textContent = 'Loading...';
-        const resp = await fetch(path);
-        const data = await resp.json();
-        responseDiv.textContent = JSON.stringify(data, null, 2);
-    } catch (error) {
-        document.getElementById('response').textContent = 'Error: ' + error.message;
+        const responseBlock = document.getElementById('response');
+        responseBlock.textContent = 'Loading...';
+        const response = await fetch(path);
+        const data = await response.json();
+        responseBlock.textContent = JSON.stringify(data, null, 2);
+        responseBlock.style.display = 'block';
+
+    } catch (error: any) {
+
+        const responseBlock = document.getElementById('response');
+        if (responseBlock) {
+            responseBlock.textContent = `Error: ${error.message}`;
+            responseBlock.style.display = 'block';
+        }
+
     }
 }

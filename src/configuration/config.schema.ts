@@ -1,3 +1,5 @@
+// TODO: Define the configuration schema for the application
+
 export const configSchema = {
   type: "object",
   properties: {
